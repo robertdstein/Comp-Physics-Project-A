@@ -1,53 +1,92 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import animation
 import plotting
 
-h=0.5
+h=0.02
 omega = 2 * np.pi
-omega = 1
-trange = np.arange(0, 8, h)
+trange = np.arange(0, 40, h)
 
-def gfunc(t):
-	return np.cos(omega*t)
+y0 = 1.5
+dy0 = 0.0
+
+g = 9.81
+l= 1.0
+m= 1.0
+
+a = 1.0
+b= 1.0
+
+D=0.2
+
+c1 = g/(l*a**2)
+c2 = (b*D)/(l*m*a)
+
+print "y0", y0, "dy0", dy0
+print "c1", c1, "c2", c2
 	
-def truedg1(t):
-	return - omega * np.sin(omega * t)
-	
-def dg1(y, olddydx):
-	d1 = olddydx + (dg2(y) * h)
+def df1(y, olddydx):
+	d1 = olddydx + (df2(y, olddydx) * h)
 	return d1
 
-def dg2(y):
-	return (-omega**2)* y
-	
-def hfunc(t):
-	return np.exp(-omega*t)
-	
-def truedh1(y):
-	return dh1(y)
-	
-def dh1(y, olddydx=0):
-	d1 = - omega * y
-	return d1
-	
-def dh2(y):
-	d2 = (omega **2)*y
-	return d2 
-	
-functions = [[gfunc, truedg1, dg1, dg2], [hfunc, truedh1, dh1, dh2]]
-funclabels = ["y = cos (kx)", "y = exp(-kx)"]
+def df2(y, olddydx):
+	return -c1* np.sin(y) - (c2 * olddydx)
 
-for j in range (0, len(functions)):
-	plt.subplot(1, len(functions), j+1)
-	[f, truedf1, df1, df2] = functions[j]
-	functionname = funclabels[j]
-	plotting.run(f, truedf1, df1, df2, trange, h, functionname)
+fig = plt.figure()		
+functionname = "Single Pendulum"
+data = plotting.run(y0, dy0, df1, df2, trange, h, functionname)
 
-	
-plt.suptitle('Fits with h = ' + str(h))
+plt.title('Single Pendulum with h = ' + str(h))
+plt.ylabel(r"$\Theta$[deg]")
+plt.xlabel('time (s)')
 	
 plt.legend()
-plt.tight_layout()
+#~ plt.tight_layout()
+
+fig.set_size_inches(15, 10)
 plt.savefig('graphs/singlependulum.pdf')
 plt.close()
+
+
+for entry in data:
+	
+	label = entry[0]
+	times = entry[1]
+	thetas = entry[2]
+	xvals=[]
+	yvals=[]
+	for val in thetas:
+		xpos = l*np.sin(val)
+		ypos = -l*np.cos(val)
+		xvals.append(xpos)
+		yvals.append(ypos)
+		if ypos > 0:
+			print ypos
+		
+	fig = plt.figure()
+	ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
+	line, = ax.plot([], [], 'o-', lw=2)
+	
+	def init():
+	    line.set_data([], [])
+	    return line
+	    
+	    
+	fps = 5
+	    
+	frameskip=1.0/(h*fps)
+	
+	nframes = int(float(len(trange))/float(frameskip))
+	print len(times), frameskip, nframes
+	
+	def animate(i):
+		x = [0.0, xvals[int(i*frameskip)]]
+		y = [0.0, yvals[int(i*frameskip)]]
+		line.set_data(x, y)
+		return line
+		
+	anim = animation.FuncAnimation(fig, animate, nframes, blit=True, init_func=init)
+	anim.save('animations/single_pendulum' + label+ '.mp4')
+	plt.close()
+	

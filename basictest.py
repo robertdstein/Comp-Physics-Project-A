@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotting
 
-h=0.02
+h=0.002
 omega = 2 * np.pi
 #omega=1
 trange = np.arange(0, 8, h)
@@ -31,7 +31,7 @@ def dh1(y, olddydx=0):
 	d1 = -omega * y
 	return d1
 	
-def dh2(y):
+def dh2(y, olddydx=0):
 	d2 = (omega **2)*y
 	return d2 
 	
@@ -44,8 +44,11 @@ for j in range (0, len(functions)):
 	ax = plt.subplot(1, len(functions), j+1)
 	[f, truedf1, df1, df2] = functions[j]
 	functionname = funclabels[j]
-	plotting.run(f, truedf1, df1, df2, trange, h, functionname)
-	
+	y0 = f(trange[0])
+	dy0 = truedf1(trange[0])
+	truey = f(trange)
+	plotting.run(y0, dy0, df1, df2, trange, h, functionname, truey)
+	plt.ylim(-2,2)
 	handles, labels = ax.get_legend_handles_labels()
 
 plt.suptitle('Fits with h = ' + str(h))

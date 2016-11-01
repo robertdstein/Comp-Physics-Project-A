@@ -11,7 +11,7 @@ def leapfrog(df2, yi, olddydx,  h, df1=0, oldoldy=0, oldolddydx=0):
 	#~ dydx = olddydx + 0.5*(a0+a1)*h
 	
 	yf = oldoldy + (2*olddydx*h)
-	dydx = oldolddydx + (2*df2(yi)*h)
+	dydx = oldolddydx + (2*df2(yi, olddydx=0)*h)
 	
 	return  yf, dydx
 	
