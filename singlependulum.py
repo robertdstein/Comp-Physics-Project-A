@@ -2,16 +2,16 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
-import plotting
+from plotting import *
 
 h=0.02
 omega = 2 * np.pi
-trange = np.arange(0, 40, h)
+trange = np.arange(0, 1000, h)
 
-y0 = 1.5
+y0 = 1.0
 dy0 = 0.0
 
-g = 9.81
+
 l= 1.0
 m= 1.0
 
@@ -33,60 +33,81 @@ def df1(y, olddydx):
 def df2(y, olddydx):
 	return -c1* np.sin(y) - (c2 * olddydx)
 
-fig = plt.figure()		
-functionname = "Single Pendulum"
-data = plotting.run(y0, dy0, df1, df2, trange, h, functionname)
+#~ fig = plt.figure()		
+title = "Single_Pendulum"
+sim = simulation(theta0=y0, dtheta0=dy0, df1=df1, df2=df2, trange=trange, h=h)
+sim.addallmethods()
+sim.plottheta(title=title)
+sim.plotenergy(title=title)
+sim.makeanimation(title=title)
 
-plt.title('Single Pendulum with h = ' + str(h))
-plt.ylabel(r"$\Theta$[deg]")
-plt.xlabel('time (s)')
+#~ plt.title('Single Pendulum with h = ' + str(h))
+#~ plt.ylabel(r"$\Theta$[deg]")
+#~ plt.xlabel('time (s)')
 	
-plt.legend()
+#~ plt.legend()
 #~ plt.tight_layout()
 
-fig.set_size_inches(15, 10)
-plt.savefig('graphs/singlependulum.pdf')
-plt.close()
+#~ fig.set_size_inches(15, 10)
+#~ plt.savefig('graphs/singlependulum.pdf')
+#~ plt.close()
 
 
-for entry in data:
+#~ for entry in data:
 	
-	label = entry[0]
-	times = entry[1]
-	thetas = entry[2]
-	xvals=[]
-	yvals=[]
-	for val in thetas:
-		xpos = l*np.sin(val)
-		ypos = -l*np.cos(val)
-		xvals.append(xpos)
-		yvals.append(ypos)
-		if ypos > 0:
-			print ypos
+	#~ label = entry[0]
+	#~ times = entry[1]
+	#~ thetas = entry[2]
+	#~ dthetas = entry[3]
+	
+	#~ xvals=[]
+	#~ yvals=[]
+	#~ gpevals = []
+	#~ kevals = []
+	
+	
+	#~ for i in range(0, len(thetas)):
+		#~ val = thetas[i]
+		#~ dval = dthetas[i]
 		
-	fig = plt.figure()
-	ax = fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(-2, 2), ylim=(-2, 2))
-	line, = ax.plot([], [], 'o-', lw=2)
-	
-	def init():
-	    line.set_data([], [])
-	    return line
-	    
-	    
-	fps = 5
-	    
-	frameskip=1.0/(h*fps)
-	
-	nframes = int(float(len(trange))/float(frameskip))
-	print len(times), frameskip, nframes
-	
-	def animate(i):
-		x = [0.0, xvals[int(i*frameskip)]]
-		y = [0.0, yvals[int(i*frameskip)]]
-		line.set_data(x, y)
-		return line
 		
-	anim = animation.FuncAnimation(fig, animate, nframes, blit=True, init_func=init)
-	anim.save('animations/single_pendulum' + label+ '.mp4')
-	plt.close()
+		#~ xpos = l*np.sin(val)
+		#~ ypos = -l*np.cos(val)
+		#~ xvals.append(xpos)
+		#~ yvals.append(ypos)
+		#~ if ypos > 0:
+			#~ print ypos
+	
+	#~ plotwidth = l + 0.5
+	
+	#~ fig = plt.figure()
+	#~ ax = fig.add_subplot(111, autoscale_on=False, xlim=(-plotwidth, plotwidth), ylim=(-plotwidth, plotwidth))
+	#~ line, = ax.plot([], [], 'o-', color='red', lw=2)
+	#~ time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
+	
+	#~ def init():
+		#~ line.set_data([], [])
+		#~ time_text.set_text('')
+		#~ return line, time_text
+		
+	#~ fps = 5
+		
+	#~ frameskip=1.0/(h*fps)
+	
+	#~ nframes = int(float(len(trange))/float(frameskip))
+	#~ print len(times), frameskip, nframes
+	
+	#~ def animate(i):
+		#~ intval = int(i*frameskip)
+		#~ x = [0.0, xvals[intval]]
+		#~ y = [0.0, yvals[intval]]
+		#~ time = "Time = " + str(times[intval]) + " s"
+		#~ line.set_data(x, y)
+		#~ time_text.set_text(time)
+		#~ return line, time_text
+	
+	#~ plt.title('Single Pendulum with ' + label + " and h = " + str(h))	
+	#~ anim = animation.FuncAnimation(fig, animate, nframes, blit=True, init_func=init)
+	#~ anim.save('animations/single_pendulum' + label+ '.mp4')
+	#~ plt.close()
 	
