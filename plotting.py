@@ -9,20 +9,18 @@ g = 9.81
 class simulation:
 	"""A container for a simulation
 	"""
-	def __init__(self, theta0, dtheta0, df1, df2, h, trange, fps=5, mass=1.0, length=1.0):
+	def __init__(self, v0, f, h, trange, fps=5, masses=np.matrix([[1.0]]), lengths=np.matrix([[1.0]])):
 		self.methods =[]
-		self.theta0 = theta0
-		self.dtheta0 = dtheta0
-		self.df1 = df1
-		self.df2 = df2
+		self.v0 = v0
+		self.f = f
 		self.h = h
 		self.trange = trange
 		self.fps = fps
-		self.mass = mass
-		self.length = length
+		self.masses = masses
+		self.lengths = lengths
 
 	def addfdm(self, methodname):
-		newmethod = fdm(functionname=methodname, theta0=self.theta0, dtheta0=self.dtheta0, df1 = self.df1, df2 = self.df2, h = self.h, fps = self.fps, mass=self.mass, length=self.length, trange = self.trange)
+		newmethod = fdm(functionname=methodname, v0=self.v0, f=self.f, h = self.h, fps = self.fps, masses=self.masses, lengths=self.lengths, trange = self.trange)
 		self.methods.append(newmethod)
 		
 	def addallmethods(self):
@@ -50,9 +48,8 @@ class simulation:
 		plt.savefig('graphs/' + str(title) + '_Theta.pdf')
 		plt.close()
 		
-	def plotenergy(self, title):
+	def plottotalenergy(self, title):
 		fig = plt.figure()
-		
 		
 		for i in range(0, len(self.methods)):
 			method = self.methods[i]
@@ -72,6 +69,28 @@ class simulation:
 		plt.savefig('graphs/' + str(title) + '_Energy.pdf')
 		plt.close()
 		
+	def plotcomponentenergy(self, title):
+		fig = plt.figure()
+		
+		for i in range(0, len(self.methods)):
+			method = self.methods[i]
+			nrows = 2
+			ncolumns = float(len(self.methods))/2.
+			plt.subplot(2, int(ncolumns) + int(ncolumns-int(ncolumns)), i+1)
+			x, y, label = method.splitEplot()
+			plt.plot(x, y, label=label)
+		
+			plt.title(method.name)
+			plt.ylabel("E")
+			plt.xlabel('time (s)')
+			plt.legend()
+
+		plt.suptitle(str(title) + ' with h = ' + str(self.h))	
+		
+		fig.set_size_inches(20, 20)
+		plt.savefig('graphs/' + str(title) + '_Energy.pdf')
+		plt.close()
+		
 	def makeanimation(self,title):
 		for method in self.methods:
 			method.animation(title)
@@ -79,21 +98,20 @@ class simulation:
 class fdm:
 	"""A class for one finite differential method
 	"""
-	def __init__(self, functionname, theta0, dtheta0, df1, df2, h, fps, mass, length, trange):
+	def __init__(self, functionname, v0, f, h, fps, masses, lengths, trange):
 		print "Initialising FDM", functionname
 		self.name = functionname
 		self.trange=trange
 		self.yieldfunction(functionname)
 		self.fits=[]
-		fit0 = frame(trange[0], theta0, dtheta0, length, mass)
+		fit0 = frame(trange[0], v0, lengths, masses)
 		self.fits.append(fit0)
-		self.df1 = df1
-		self.df2 = df2
+		self.f = f
 		self.h = h
 		self.fps = fps
 		self.frameskip = 1.0/(h*fps)
-		self.mass=mass
-		self.length=length
+		self.masses=masses
+		self.lengths=lengths
 		self.stable="Absolutely Stable"
 		self.simulate()
 		
@@ -112,28 +130,27 @@ class fdm:
 	def simulate(self):
 		if self.function == nm.leapfrog:
 			oldframe = self.fits[0]
-			theta, dtheta = nm.impliciteuler(df1=self.df1, df2=self.df2, oldframe=oldframe, h=self.h)
-			fit1 = frame(self.trange[1], theta, dtheta, self.length, self.mass)	
+			v = nm.rk4(f=self.f, oldframe=oldframe, h=self.h)
+			fit1 = frame(self.trange[1], v, self.lengths, self.masses)	
 			self.fits.append(fit1)
 		
-		oldE = self.fits[0].totalenergy
+		oldE = self.fits[0].systemenergy
 		
 		for i in range(len(self.fits), self.trange.size):
 			t = self.trange[i]
 			oldframe = self.fits[i-1]
-			#~ oldE = oldframe.totalenergy
 			if i < 2:
 				oldoldframe = None
 			else:
 				oldoldframe = self.fits[i-2]
 			
-			theta, dtheta = self.function(df1=self.df1, df2=self.df2, oldframe=oldframe, h=self.h, oldoldframe = oldoldframe)
+			v = self.function(f = self.f, oldframe=oldframe, h=self.h, oldoldframe = oldoldframe)
 			
-			fit = frame(t, theta, dtheta, self.length, self.mass)
+			fit = frame(t, v, self.lengths, self.masses)
 			
 			self.fits.append(fit)
 			
-			newE = fit.totalenergy
+			newE = fit.systemenergy
 			
 			if newE > oldE:
 				if newE > (oldE + (10**-10)):
@@ -143,12 +160,12 @@ class fdm:
 			else:
 				pass
 				
-			oldE = newE
+			#~ oldE = newE
 				
 	def toplot(self):
 		y = []
 		for oneframe in self.fits:
-			yval = oneframe.theta 
+			yval = oneframe.vector.item(0)
 			y.append(yval)
 			
 		label = self.name + " (" + str(self.stable) + ")"
@@ -157,10 +174,26 @@ class fdm:
 	def deltaEplot(self):
 		deltaEs = []
 		frame0 = self.fits[0]
-		E0 = frame0.totalenergy
+		E0 = frame0.systemenergy
 		
 		for oneframe in self.fits:
-			E1 = oneframe.totalenergy
+			E1 = oneframe.systemenergy
+			deltaE = E1-E0
+			deltaEs.append(deltaE)
+			E0 = E1
+					
+		label = self.name + " (" + str(self.stable) + ")"	
+		return self.trange, deltaEs, label
+		
+	def splitEplot(self):
+		deltaEs = []
+		frame0 = self.fits[0]
+		E0 = []
+		for pen in frame0.pendulums:
+			E0.append(pen.totalenergy)
+		
+		for oneframe in self.fits:
+			E1 = oneframe.systemenergy
 			deltaE = E1-E0
 			deltaEs.append(deltaE)
 			E0 = E1
@@ -169,7 +202,7 @@ class fdm:
 		return self.trange, deltaEs, label
 		
 	def animation(self, title):
-		plotwidth = self.length + 0.5
+		plotwidth = np.sum(self.lengths) + 0.5
 		
 		fig = plt.figure()
 		ax = fig.add_subplot(111, autoscale_on=False, xlim=(-plotwidth, plotwidth), ylim=(-plotwidth, plotwidth))
@@ -184,19 +217,18 @@ class fdm:
 			return line, time_text, energy_text
 			
 		global baseE
-		baseE = self.fits[0].totalenergy
-		
-		#~ def updatebase(E):
-			#~ global baseE
-			#~ baseE = E
+		baseE = self.fits[0].systemenergy
 		
 		def animate(i):
 			intval = int(i*self.frameskip)
 			currentframe = self.fits[intval]
-			x = [0.0, currentframe.xpos]
-			y = [0.0, currentframe.ypos]
+			x = [0.0]
+			y = [0.0]
+			for pen in currentframe.pendulums:
+				x.append(pen.xpos)
+				y.append(pen.ypos)
 			time = "Time = " + str(currentframe.time) + " s"
-			E = currentframe.totalenergy
+			E = currentframe.systemenergy
 			global baseE
 			if E > baseE:
 				energy_text.set_color('red')
@@ -220,67 +252,41 @@ class fdm:
 class frame:
 	"""A single snapshot in a simulation
 	"""
-	def __init__(self, t, theta, dtheta, length, mass):
+	def __init__(self, t, v, lengths, masses):
+		self.pendulums = []
+		self.systemenergy = 0.0
+		self.vector = v
+		self.time=t
+		xpos = 0.0
+		ypos = 0.0
+		velocity = 0.0
+		totallength = 0.0
+		for i in range(0, len(lengths)):
+			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
+			totallength += 0.0
+			xpos += length*np.sin(theta)
+			ypos += -length*np.cos(theta)
+			velocity += length*dtheta
+			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, length, mass, velocity, totallength)
+			self.systemenergy += newpendulum.totalenergy
+			self.pendulums.append(newpendulum)
+		
+class pendulum:
+	"""One pendulum within a frame
+	"""
+	def __init__(self, t, theta, dtheta, xpos, ypos, length, mass, velocity, totallength):
 		self.time = t
 		self.mass = mass
 		self.theta = theta
 		self.dtheta =  dtheta
-		self.xpos = length*np.sin(theta)
-		self.ypos = -length*np.cos(theta)
-		self.velocity = length * dtheta
-		self.findenergy(length)
+		self.xpos = xpos
+		self.ypos = ypos
+		self.velocity = velocity
+		self.findenergy(totallength)
 		
-	def findenergy(self, length):
+	def findenergy(self, totallength):
 		"Finds energy of system"
 		self.kpe = 0.5 * (self.velocity**2) * self.mass
-		self.gpe = g * (length+self.ypos) * self.mass
+		self.gpe = g * (totallength+self.ypos) * self.mass
 		self.totalenergy = self.kpe + self.gpe
-		
-#~ def run(y0, dy0, df1, df2, trange, h, functionname,truey=None):
-	
-	#~ labels = ["Explicit Euler", "Leapfrog", "Implicit Euler", "Runge-Kutta 4"]
-	#~ methods = [nm.expliciteuler, nm.leapfrog, nm.impliciteuler, nm.rk4]
-	
-	#~ data = []
-	
-	#~ for k in range(0, len(methods)):
-		
-		#~ label = labels[k]
-		#~ method = methods[k]
-		
-		#~ fity=[y0]
-		#~ fitdydx=[dy0]
-		
-		#~ if method == nm.leapfrog:
-			#~ fit, dydx = nm.rk4(df1=df1, df2=df2, yi=y0, olddydx=dy0, h=h)		
-			#~ fity.append(fit)
-			#~ fitdydx.append(dydx)
-		
-		#~ print label, fity, fitdydx
-		
-		#~ for i in range(len(fity), trange.size):
-			#~ oldy = fity[i-1]
-			#~ olddydx = fitdydx[i-1]
-			
-			#~ oldoldy = fity[i-2]
-			#~ oldolddydx = fitdydx[i-2]
-			
-			#~ fit, dydx = method(df1=df1, df2=df2, yi=oldy, olddydx=olddydx, h=h, oldoldy=oldoldy, oldolddydx=oldolddydx)
-			
-			#~ fity.append(fit)
-			#~ fitdydx.append(dydx)
-		
-		#~ plt.plot(trange,fity, label=label)
-		
-		#~ data.append([label, trange, fity, fitdydx])
-		
-	#~ if truey != None:
-		#~ if truey[0] == y0:
-			#~ plt.plot(trange,truey, '--', color='black', label="True Y")
-		#~ else:
-			#~ raise Exception("y0 does not match first entry in true y")
-		
-	#~ plt.title(functionname)
-	
-	#~ return data
 	
