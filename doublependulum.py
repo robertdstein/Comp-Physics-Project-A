@@ -6,7 +6,7 @@ from plotting import *
 
 h=0.02
 omega = 2 * np.pi
-trange = np.arange(0, 10, h)
+trange = np.arange(0, 100, h)
 
 y0 = [1.0]
 dy0 = [0.0]
@@ -19,12 +19,12 @@ print "v0", v0
 
 
 l= np.matrix([[1.0], [1.0]])
-m= np.matrix([[1.0], [3.0]])
+m= np.matrix([[1.0], [1.0]])
 
 a = 1.0
 b= 1.0
 
-D=0.2
+D=0.5
 
 R = m[0]/m[1]
 G = D/(m[0]*math.sqrt(g*l.item(0)))
@@ -45,5 +45,6 @@ sim = simulation(v0, f=f, trange=trange, h=h, lengths=l, masses=m)
 sim.addallmethods()
 sim.plottheta(title=title)
 sim.plottotalenergy(title=title)
-sim.makeanimation(title=title)
+sim.plotcomponentenergy(title=title)
+#~ sim.makeanimation(title=title)
 	

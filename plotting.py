@@ -77,8 +77,8 @@ class simulation:
 			nrows = 2
 			ncolumns = float(len(self.methods))/2.
 			plt.subplot(2, int(ncolumns) + int(ncolumns-int(ncolumns)), i+1)
-			x, y, label = method.splitEplot()
-			plt.plot(x, y, label=label)
+			x, y, labels = method.splitEplot()
+			plt.plot(x, y, label=labels)
 		
 			plt.title(method.name)
 			plt.ylabel("E")
@@ -88,7 +88,7 @@ class simulation:
 		plt.suptitle(str(title) + ' with h = ' + str(self.h))	
 		
 		fig.set_size_inches(20, 20)
-		plt.savefig('graphs/' + str(title) + '_Energy.pdf')
+		plt.savefig('graphs/' + str(title) + '_Energy_Components.pdf')
 		plt.close()
 		
 	def makeanimation(self,title):
@@ -186,20 +186,20 @@ class fdm:
 		return self.trange, deltaEs, label
 		
 	def splitEplot(self):
-		deltaEs = []
-		frame0 = self.fits[0]
-		E0 = []
-		for pen in frame0.pendulums:
-			E0.append(pen.totalenergy)
-		
+		Es = []		
 		for oneframe in self.fits:
-			E1 = oneframe.systemenergy
-			deltaE = E1-E0
-			deltaEs.append(deltaE)
-			E0 = E1
+			E = []
+			for pen in oneframe.pendulums:
+				Ei = pen.totalenergy
+				E.append(Ei)
+			Es.append(E)
 					
-		label = self.name + " (" + str(self.stable) + ")"	
-		return self.trange, deltaEs, label
+		labels = []
+		for i in range(0, len(self.fits[0].pendulums)):
+			label = "Pendulum " + str(i+1)
+			labels.append(label)
+		print labels
+		return self.trange, Es, labels
 		
 	def animation(self, title):
 		plotwidth = np.sum(self.lengths) + 0.5
@@ -260,21 +260,25 @@ class frame:
 		xpos = 0.0
 		ypos = 0.0
 		velocity = 0.0
-		totallength = 0.0
+		intlength = 0.0
+		sumlength = 0.0
+		for val in lengths:
+			sumlength += val.item(0)
+			intlength += sumlength
+		avlength = intlength / float(len(lengths))
 		for i in range(0, len(lengths)):
 			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
-			totallength += 0.0
 			xpos += length*np.sin(theta)
 			ypos += -length*np.cos(theta)
 			velocity += length*dtheta
-			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, length, mass, velocity, totallength)
+			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, length, mass, velocity, avlength)
 			self.systemenergy += newpendulum.totalenergy
 			self.pendulums.append(newpendulum)
 		
 class pendulum:
 	"""One pendulum within a frame
 	"""
-	def __init__(self, t, theta, dtheta, xpos, ypos, length, mass, velocity, totallength):
+	def __init__(self, t, theta, dtheta, xpos, ypos, length, mass, velocity, avlength):
 		self.time = t
 		self.mass = mass
 		self.theta = theta
@@ -282,11 +286,11 @@ class pendulum:
 		self.xpos = xpos
 		self.ypos = ypos
 		self.velocity = velocity
-		self.findenergy(totallength)
+		self.findenergy(avlength)
 		
-	def findenergy(self, totallength):
+	def findenergy(self, avlength):
 		"Finds energy of system"
 		self.kpe = 0.5 * (self.velocity**2) * self.mass
-		self.gpe = g * (totallength+self.ypos) * self.mass
+		self.gpe = g * (avlength+self.ypos) * self.mass
 		self.totalenergy = self.kpe + self.gpe
 	
