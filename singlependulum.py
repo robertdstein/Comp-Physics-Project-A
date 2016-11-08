@@ -40,5 +40,6 @@ sim = simulation(v0, f=f, trange=trange, h=h)
 sim.addallmethods()
 sim.plottheta(title=title)
 sim.plottotalenergy(title=title)
+sim.plotcomponentenergy(title=title)
 #~ sim.makeanimation(title=title)
 	

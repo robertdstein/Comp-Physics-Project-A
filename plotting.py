@@ -77,8 +77,11 @@ class simulation:
 			nrows = 2
 			ncolumns = float(len(self.methods))/2.
 			plt.subplot(2, int(ncolumns) + int(ncolumns-int(ncolumns)), i+1)
-			x, y, labels = method.splitEplot()
-			plt.plot(x, y, label=labels)
+			x, ys, labels = method.splitEplot()
+			for i in range(0, len(ys)):
+				y = ys[i]
+				label = labels[i]
+				plt.plot(x, y, label=label)
 		
 			plt.title(method.name)
 			plt.ylabel("E")
@@ -148,6 +151,15 @@ class fdm:
 			
 			fit = frame(t, v, self.lengths, self.masses)
 			
+			
+			for j in range(0, len(fit.pendulums)):
+				pen = fit.pendulums[j]
+				oldpen = oldframe.pendulums[j]
+				dist = math.sqrt((pen.xpos- oldpen.xpos)**2 + (pen.ypos - oldpen.ypos)**2)
+				velestimate = dist/self.h
+				
+				print "Vel estimate", velestimate, "v", pen.velocity, "oldv", oldpen.velocity
+			
 			self.fits.append(fit)
 			
 			newE = fit.systemenergy
@@ -186,19 +198,29 @@ class fdm:
 		return self.trange, deltaEs, label
 		
 	def splitEplot(self):
-		Es = []		
-		for oneframe in self.fits:
-			E = []
-			for pen in oneframe.pendulums:
-				Ei = pen.totalenergy
-				E.append(Ei)
-			Es.append(E)
-					
+		Es = [[], []]
+		npend = len(self.fits[0].pendulums)
+		
 		labels = []
-		for i in range(0, len(self.fits[0].pendulums)):
+		for i in range(0, npend):
+			Es.append([])
 			label = "Pendulum " + str(i+1)
 			labels.append(label)
-		print labels
+		labels.append("GPE")
+		labels.append("KE")
+			
+		for oneframe in self.fits:
+			gpe = 0.0
+			ke = 0.0
+			for i in range(0, npend):
+				pen = oneframe.pendulums[i]
+				Ei = pen.totalenergy
+				Es[i].append(Ei)
+				gpe += pen.gpe
+				ke += pen.ke
+			Es[npend].append(gpe)
+			Es[npend+1].append(ke)
+					
 		return self.trange, Es, labels
 		
 	def animation(self, title):
@@ -257,40 +279,69 @@ class frame:
 		self.systemenergy = 0.0
 		self.vector = v
 		self.time=t
-		xpos = 0.0
-		ypos = 0.0
-		velocity = 0.0
+		allxpos = [0.0]
+		allypos = [0.0]
+
 		intlength = 0.0
 		sumlength = 0.0
 		for val in lengths:
 			sumlength += val.item(0)
 			intlength += sumlength
 		avlength = intlength / float(len(lengths))
+		
+		olddthetas = []
+		
 		for i in range(0, len(lengths)):
 			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
-			xpos += length*np.sin(theta)
-			ypos += -length*np.cos(theta)
-			velocity += length*dtheta
-			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, length, mass, velocity, avlength)
+			xpos = allxpos[i] + length*np.sin(theta)
+			allxpos.append(xpos)
+			ypos = allypos[i] -length*np.cos(theta)
+			allypos.append(ypos)
+			
+			olddthetas.append(dtheta)
+			
+			vx=0.0
+			vy = 0.0
+			lastdt=0.0
+			vel=0.0
+			
+			for j in range(0, len(olddthetas)):
+				olddt = olddthetas[j]
+				oldx = allxpos[j]
+				oldy = allypos[j]
+				dist = math.sqrt((xpos-oldx)**2 + (ypos-oldy)**2)
+				angle = math.atan(-(xpos-oldx)/(ypos-oldx))
+				vx += dist * np.cos(angle)*(olddt-lastdt)
+				vy += -dist * np.sin(angle)*(olddt-lastdt)
+				vel += np.abs(dist * olddt)
+				lastdt = olddt
+			
+			print "Vel", vel
+			
+			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, vx, vy, length, mass, avlength, vel)
 			self.systemenergy += newpendulum.totalenergy
 			self.pendulums.append(newpendulum)
+			
 		
 class pendulum:
 	"""One pendulum within a frame
 	"""
-	def __init__(self, t, theta, dtheta, xpos, ypos, length, mass, velocity, avlength):
+	def __init__(self, t, theta, dtheta, xpos, ypos, vx, vy, length, mass, avlength, vel):
 		self.time = t
 		self.mass = mass
 		self.theta = theta
 		self.dtheta =  dtheta
 		self.xpos = xpos
 		self.ypos = ypos
-		self.velocity = velocity
+		self.vx= vx
+		self.vy = vy
+		self.velocity = vel
+		#~ math.sqrt((vx**2) + (vy**2))
 		self.findenergy(avlength)
 		
 	def findenergy(self, avlength):
 		"Finds energy of system"
-		self.kpe = 0.5 * (self.velocity**2) * self.mass
+		self.ke = 0.5 * (self.velocity**2) * self.mass
 		self.gpe = g * (avlength+self.ypos) * self.mass
-		self.totalenergy = self.kpe + self.gpe
+		self.totalenergy = self.ke + self.gpe
 	
