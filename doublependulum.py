@@ -8,7 +8,7 @@ h=0.02
 omega = 2 * np.pi
 trange = np.arange(0, 50, h)
 
-y0 = [1.0]
+y0 = [0.0]
 dy0 = [0.0]
 z0 = [1.0]
 dz0 = [0.0]
@@ -18,7 +18,7 @@ v0 = np.matrix([y0, dy0, z0, dz0])
 print "v0", v0
 
 l= np.matrix([[1.0], [1.0]])
-m= np.matrix([[1.0], [0.001]])
+m= np.matrix([[1.0], [1.0]])
 
 a = 1.0
 b= 1.0

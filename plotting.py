@@ -158,7 +158,7 @@ class fdm:
 				dist = math.sqrt((pen.xpos- oldpen.xpos)**2 + (pen.ypos - oldpen.ypos)**2)
 				velestimate = dist/self.h
 				
-				print "Vel estimate", velestimate, "v", pen.velocity, "oldv", oldpen.velocity
+				#~ print "Vel estimate", velestimate, "v", pen.velocity, "oldv", oldpen.velocity
 			
 			self.fits.append(fit)
 			
@@ -198,7 +198,7 @@ class fdm:
 		return self.trange, deltaEs, label
 		
 	def splitEplot(self):
-		Es = [[], []]
+		Es = [[], [], [], []]
 		npend = len(self.fits[0].pendulums)
 		
 		labels = []
@@ -208,18 +208,24 @@ class fdm:
 			labels.append(label)
 		labels.append("GPE")
 		labels.append("KE")
+		labels.append("Sum Pendulums")
+		labels.append("Sum components")
 			
 		for oneframe in self.fits:
 			gpe = 0.0
 			ke = 0.0
+			E = 0.0
 			for i in range(0, npend):
 				pen = oneframe.pendulums[i]
 				Ei = pen.totalenergy
 				Es[i].append(Ei)
+				E += Ei
 				gpe += pen.gpe
 				ke += pen.ke
 			Es[npend].append(gpe)
 			Es[npend+1].append(ke)
+			Es[npend+2].append(E)
+			Es[npend+3].append(ke + gpe)
 					
 		return self.trange, Es, labels
 		
@@ -287,15 +293,15 @@ class frame:
 		for val in lengths:
 			sumlength += val.item(0)
 			intlength += sumlength
-		avlength = intlength / float(len(lengths))
+		avlength = 0.0
 		
 		olddthetas = []
 		
 		for i in range(0, len(lengths)):
 			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
-			xpos = allxpos[i] + length*np.sin(theta)
+			xpos = allxpos[i] + length*np.cos(theta)
 			allxpos.append(xpos)
-			ypos = allypos[i] -length*np.cos(theta)
+			ypos = allypos[i] -length*np.sin(theta)
 			allypos.append(ypos)
 			
 			olddthetas.append(dtheta)
@@ -311,15 +317,17 @@ class frame:
 				oldy = allypos[j]
 				dist = math.sqrt((xpos-oldx)**2 + (ypos-oldy)**2)
 				angle = math.atan(-(xpos-oldx)/(ypos-oldx))
-				vx += dist * np.cos(angle)*(olddt-lastdt)
-				vy += -dist * np.sin(angle)*(olddt-lastdt)
-				vel += np.abs(dist * olddt)
+				vx += dist * np.cos(angle)*(olddt)
+				vy += -dist * np.sin(angle)*(olddt)
+				vel += np.absolute(dist * olddt)
 				lastdt = olddt
-			
-			print "Vel", vel
+				
+			#~ if vel > 1.00:
+				#~ print "Theta", theta, "Vel", vel, "Dtheta", dtheta
 			
 			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, vx, vy, length, mass, avlength, vel)
 			self.systemenergy += newpendulum.totalenergy
+			avlength += length
 			self.pendulums.append(newpendulum)
 			
 		
@@ -342,6 +350,6 @@ class pendulum:
 	def findenergy(self, avlength):
 		"Finds energy of system"
 		self.ke = 0.5 * (self.velocity**2) * self.mass
-		self.gpe = g * (avlength+self.ypos) * self.mass
+		self.gpe = g * (self.ypos + avlength) * self.mass
 		self.totalenergy = self.ke + self.gpe
 	
