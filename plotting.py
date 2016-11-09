@@ -301,15 +301,15 @@ class frame:
 		
 		for i in range(0, len(lengths)):
 			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
-			xpos = allxpos[i] + length*np.cos(theta)
+			xpos = allxpos[i] + length*np.sin(theta)
 			allxpos.append(xpos)
-			ypos = allypos[i] -length*np.sin(theta)
+			ypos = allypos[i] -length*np.cos(theta)
 			allypos.append(ypos)
 			
 			oldthetas.append(theta)
 			olddthetas.append(dtheta)
 			oldlengths.append(length)
-			
+			avlength += length
 			vx=0.0
 			vy = 0.0
 			lastdt=0.0
@@ -332,7 +332,7 @@ class frame:
 			
 			newpendulum = pendulum(t, theta, dtheta, xpos, ypos, vx, vy, length, mass, avlength, vel)
 			self.systemenergy += newpendulum.totalenergy
-			avlength += length
+			
 			self.pendulums.append(newpendulum)
 			
 		

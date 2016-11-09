@@ -8,9 +8,9 @@ h=0.02
 omega = 2 * np.pi
 trange = np.arange(0, 50, h)
 
-y0 = [0.0]
+y0 = [1.0]
 dy0 = [0.0]
-z0 = [1.0]
+z0 = [0.0]
 dz0 = [0.0]
 
 v0 = np.matrix([y0, dy0, z0, dz0])
@@ -44,5 +44,5 @@ sim.addallmethods()
 sim.plottheta(title=title)
 sim.plottotalenergy(title=title)
 sim.plotcomponentenergy(title=title)
-#~ sim.makeanimation(title=title)
+sim.makeanimation(title=title)
 	
