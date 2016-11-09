@@ -295,7 +295,9 @@ class frame:
 			intlength += sumlength
 		avlength = 0.0
 		
+		oldthetas = []
 		olddthetas = []
+		oldlengths=[]
 		
 		for i in range(0, len(lengths)):
 			theta, dtheta, length, mass = v.item(2*i), v.item((2*i)+1), lengths.item(i), masses.item(i)
@@ -304,7 +306,9 @@ class frame:
 			ypos = allypos[i] -length*np.sin(theta)
 			allypos.append(ypos)
 			
+			oldthetas.append(theta)
 			olddthetas.append(dtheta)
+			oldlengths.append(length)
 			
 			vx=0.0
 			vy = 0.0
@@ -312,14 +316,15 @@ class frame:
 			vel=0.0
 			
 			for j in range(0, len(olddthetas)):
+				oldt = oldthetas[j]
 				olddt = olddthetas[j]
+				oldl = oldlengths[j]
 				oldx = allxpos[j]
 				oldy = allypos[j]
 				dist = math.sqrt((xpos-oldx)**2 + (ypos-oldy)**2)
-				angle = math.atan(-(xpos-oldx)/(ypos-oldx))
-				vx += dist * np.cos(angle)*(olddt)
-				vy += -dist * np.sin(angle)*(olddt)
-				vel += np.absolute(dist * olddt)
+				vx += oldl * np.sin(oldt)*(olddt)
+				vy += oldl * np.cos(oldt)*(olddt)
+				#vel += np.absolute(dist * olddt)
 				lastdt = olddt
 				
 			#~ if vel > 1.00:
@@ -343,8 +348,7 @@ class pendulum:
 		self.ypos = ypos
 		self.vx= vx
 		self.vy = vy
-		self.velocity = vel
-		#~ math.sqrt((vx**2) + (vy**2))
+		self.velocity = math.sqrt((vx**2) + (vy**2))
 		self.findenergy(avlength)
 		
 	def findenergy(self, avlength):
